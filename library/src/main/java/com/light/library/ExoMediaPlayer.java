@@ -49,15 +49,16 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     private int mRetry;
     private int worseCount;
     private long mPosition;
+    private long mResumePos;
     private long mDuration;
     private float mSpeed;
     private String mUri;
     private Handler mHandler;
+    private Config mConfig;
     private SimpleExoPlayer mExoPlayer;
     private MediaSource mMediaSource;
     private IMediaPlayer.MediaEventListener mMediaEventListener;
     private SurfaceHolder mSurfaceHolder;
-    private ErrorReporter mErrorReporter;
 
     private final Runnable updateProgressAction = new Runnable() {
         @Override
@@ -106,6 +107,7 @@ class ExoMediaPlayer extends AbsMediaPlayer {
                         mPlayerState = IMediaPlayer.STATE_COMPLETE;
                         mTargetState = -1;
                         stop();
+                        mResumePos = 0;
                         changeAudioFocus(false);
                         clearSurfaceWhenComplete();
                         mMediaEventListener.onComplete();
@@ -140,13 +142,14 @@ class ExoMediaPlayer extends AbsMediaPlayer {
         public void onPlayerError(ExoPlaybackException error) {
             if (error == null)
                 return;
-
             mPlayerState = IMediaPlayer.STATE_ERROR;
             if (mMediaEventListener != null)
                 mMediaEventListener.onError(error);
-
-            if (mErrorReporter != null)
-                mErrorReporter.report(mUri, error);
+            if (mConfig != null) {
+                ErrorReporter reporter = mConfig.getErrorReporter();
+                if (reporter != null)
+                    reporter.report(mUri, error);
+            }
         }
 
         @Override
@@ -215,7 +218,15 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     }
 
     @Override
-    public void setMediaSource(final String uri, long position, float speed) {
+    public void setConfig(Config config) {
+        mConfig = config;
+    }
+
+    @Override
+    public void setMedia(Media media) {
+        if (media == null)
+            return;
+        String uri = media.getUri();
         if (TextUtils.isEmpty(uri)) {
             if (mMediaEventListener != null)
                 mMediaEventListener.onError(new Exception("uri can't be null"));
@@ -223,8 +234,10 @@ class ExoMediaPlayer extends AbsMediaPlayer {
             mPlayerState = IMediaPlayer.STATE_PREPARED;
             mRetry = 0;
             mUri = uri;
-            mSpeed = speed;
+            mSpeed = media.getSpeed();
+            long position = media.getPosition();
             mPosition = position;
+            mResumePos = position;
             mDuration = 0;
             openMediaSource();
         }
@@ -245,7 +258,7 @@ class ExoMediaPlayer extends AbsMediaPlayer {
                 String duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
                 mDuration = Long.valueOf(duration);
             } catch (Exception e) {
-                e.printStackTrace();
+                //Do nothing
             }
         }
         mMediaSource = createMediaSource();
@@ -260,7 +273,8 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     }
 
     private MediaSource createMediaSource() {
-        String userAgent = Util.getUserAgent(mContext, "IMediaPlayer");
+        String appId = mConfig == null ? "MediaPlayer" : mConfig.getApplicationId();
+        String userAgent = Util.getUserAgent(mContext, appId);
         DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(mContext, userAgent);
         MediaSource mediaSource;
         if (isHls()) {
@@ -289,9 +303,16 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     }
 
     @Override
-    public void play() {
-        if (mExoPlayer != null)
-            mExoPlayer.setPlayWhenReady(true);
+    public void resume() {
+        if (mExoPlayer != null) {
+            int state = mExoPlayer.getPlaybackState();
+            if (state == Player.STATE_READY || state == Player.STATE_BUFFERING) {
+                mExoPlayer.setPlayWhenReady(true);
+            } else {
+                stop();
+                setMedia(new Media(mUri, mResumePos, mSpeed));
+            }
+        }
     }
 
     @Override
@@ -304,6 +325,7 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     public void seekTo(long position) {
         if (mExoPlayer != null && position >= 0 && position < getDuration()) {
             mPosition = position;
+            mResumePos = position;
             mExoPlayer.seekTo(position);
         }
     }
@@ -370,15 +392,14 @@ class ExoMediaPlayer extends AbsMediaPlayer {
                     try {
                         mMediaSource.releaseSource();
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        //Do nothing
                     } finally {
                         mMediaSource = null;
                     }
                 }
             }
-            mUri = null;
         } catch (Exception e) {
-            e.printStackTrace();
+            //Do nothing
         }
     }
 
@@ -405,40 +426,37 @@ class ExoMediaPlayer extends AbsMediaPlayer {
 
     @Override
     public void setSurface(SurfaceView surfaceView) {
-        SurfaceHolder holder = surfaceView.getHolder();
-        holder.addCallback(new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-                if (mExoPlayer != null)
-                    mExoPlayer.setVideoSurfaceHolder(holder);
-            }
+        if (surfaceView != null) {
+            SurfaceHolder holder = surfaceView.getHolder();
+            holder.addCallback(new SurfaceHolder.Callback() {
+                @Override
+                public void surfaceCreated(SurfaceHolder holder) {
+                    if (mExoPlayer != null)
+                        mExoPlayer.setVideoSurfaceHolder(holder);
+                }
 
-            @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                if (mExoPlayer != null)
-                    mExoPlayer.setVideoSurfaceHolder(holder);
-            }
+                @Override
+                public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                    if (mExoPlayer != null)
+                        mExoPlayer.setVideoSurfaceHolder(holder);
+                }
 
-            @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {
-                if (mExoPlayer != null)
-                    mExoPlayer.clearVideoSurfaceHolder(holder);
-            }
-        });
-        if (mExoPlayer != null)
-            mExoPlayer.setVideoSurfaceHolder(holder);
-        mSurfaceHolder = holder;
+                @Override
+                public void surfaceDestroyed(SurfaceHolder holder) {
+                    if (mExoPlayer != null)
+                        mExoPlayer.clearVideoSurfaceHolder(holder);
+                }
+            });
+            if (mExoPlayer != null)
+                mExoPlayer.setVideoSurfaceHolder(holder);
+            mSurfaceHolder = holder;
+        }
     }
 
     @Override
-    public void clearSurface(SurfaceView surfaceView) {
-        if (mExoPlayer != null)
-            mExoPlayer.clearVideoSurfaceHolder(surfaceView.getHolder());
-    }
-
-    @Override
-    public void setErrorReporter(ErrorReporter errorReporter) {
-        mErrorReporter = errorReporter;
+    public void clearSurface() {
+        if (mExoPlayer != null && mSurfaceHolder != null)
+            mExoPlayer.clearVideoSurfaceHolder(mSurfaceHolder);
     }
 
     private boolean isHls() {
@@ -451,7 +469,7 @@ class ExoMediaPlayer extends AbsMediaPlayer {
 
     private boolean isNetworkConnected(Context context) {
         ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo info = manager.getActiveNetworkInfo();
+        NetworkInfo info = manager == null ? null : manager.getActiveNetworkInfo();
         return info != null && info.isAvailable() && info.isConnected();
     }
 
@@ -460,22 +478,24 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     }
 
     private void updateProgress(boolean justOpen) {
-        mPosition = getCurrentPosition();
-        if (isPlaying()) {
-            if (mMediaEventListener != null)
-                mMediaEventListener.onPositionChanged((int) mPosition, (int) getDuration());
-        }
         if (mExoPlayer != null) {
-            long bufferedPosition = mExoPlayer.getBufferedPosition();
-            int buffer = Math.min(DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS, DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS);
-            if (!justOpen && bufferedPosition - mPosition < buffer) {
-                if (worseCount > 3) {
-                    if (mMediaEventListener != null)
-                        mMediaEventListener.onNetWorse();
+            int state = mExoPlayer.getPlaybackState();
+            if (state != Player.STATE_IDLE && mExoPlayer.getPlayWhenReady()) {
+                mPosition = mExoPlayer.getCurrentPosition();
+                mResumePos = mPosition;
+                long buffered = mExoPlayer.getBufferedPosition();
+                if (mMediaEventListener != null && state == Player.STATE_READY)
+                    mMediaEventListener.onPositionChanged((int) mPosition, (int) buffered, (int) getDuration());
+                int buffer = Math.min(DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS, DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS);
+                if (!justOpen && buffered - mPosition < buffer) {
+                    if (worseCount > 3) {
+                        if (mMediaEventListener != null)
+                            mMediaEventListener.onNetWorse();
+                    }
+                    worseCount++;
+                } else {
+                    worseCount = 0;
                 }
-                worseCount++;
-            } else {
-                worseCount = 0;
             }
         }
         mHandler.postDelayed(updateProgressAction, 1000);

@@ -28,9 +28,11 @@ public interface IMediaPlayer {
     int STATE_ERROR = 6;
     int STATE_IDLE = 7;
 
-    void setMediaSource(String uri, long position, float speed);
+    void setConfig(Config config);
 
-    void play();
+    void setMedia(Media media);
+
+    void resume();
 
     void pause();
 
@@ -54,13 +56,11 @@ public interface IMediaPlayer {
 
     void setSurface(SurfaceView surfaceView);
 
-    void clearSurface(SurfaceView surfaceView);
+    void clearSurface();
 
     void setMediaEventListener(MediaEventListener listener);
 
     void release();
-
-    void setErrorReporter(ErrorReporter errorReporter);
 
     interface MediaEventListener {
         void onBuffering();
@@ -75,7 +75,7 @@ public interface IMediaPlayer {
 
         void onComplete();
 
-        void onPositionChanged(int position, int duration);
+        void onPositionChanged(int position, int buffered, int duration);
 
         void onNetWorse();
     }

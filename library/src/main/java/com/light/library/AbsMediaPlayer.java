@@ -39,7 +39,7 @@ public abstract class AbsMediaPlayer implements IMediaPlayer {
                             break;
                         case TelephonyManager.CALL_STATE_IDLE://挂断
                             if (mWasPlaying)
-                                play();
+                                resume();
                             break;
                     }
                     break;
@@ -64,7 +64,7 @@ public abstract class AbsMediaPlayer implements IMediaPlayer {
                     break;
                 case AudioManager.AUDIOFOCUS_GAIN:
                     if (mWasLossPlaying) {
-                        play();
+                        resume();
                         mWasLossPlaying = false;
                     }
                     break;
