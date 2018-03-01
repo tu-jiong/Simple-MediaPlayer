@@ -16,8 +16,7 @@ import com.light.library.Media;
 
 public class MainActivity extends Activity {
 
-    //    private String url = "rtmp://live.hkstv.hk.lxdns.com/live/hks";
-    private String url = "http://source.highso.com.cn/1705/JBGYTCLI/JBGYTCLI_phone/JBGYTCLI_phone.m3u8";
+    private String url = "rtmp://live.hkstv.hk.lxdns.com/live/hks";
     private SurfaceView mSurfaceView;
     private SeekBar mSeekBar;
     private TextView mTextView;
