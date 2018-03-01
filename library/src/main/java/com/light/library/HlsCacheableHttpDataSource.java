@@ -17,11 +17,11 @@ import com.google.android.exoplayer2.util.Util;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.NoRouteToHostException;
@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
  * Created by Tujiong on 2018/2/10.
  */
 
-public class OptimalCacheHttpDataSource implements HttpDataSource {
+public class HlsCacheableHttpDataSource implements HttpDataSource {
 
     public static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 8 * 1000;
     public static final int DEFAULT_READ_TIMEOUT_MILLIS = 8 * 1000;
@@ -72,24 +72,24 @@ public class OptimalCacheHttpDataSource implements HttpDataSource {
     private boolean cache;
     private String cachePath;
 
-    public OptimalCacheHttpDataSource(boolean cache, String cachePath, String userAgent, Predicate<String> contentTypePredicate) {
+    public HlsCacheableHttpDataSource(boolean cache, String cachePath, String userAgent, Predicate<String> contentTypePredicate) {
         this(cache, cachePath, userAgent, contentTypePredicate, null);
     }
 
-    public OptimalCacheHttpDataSource(boolean cache, String cachePath, String userAgent, Predicate<String> contentTypePredicate,
+    public HlsCacheableHttpDataSource(boolean cache, String cachePath, String userAgent, Predicate<String> contentTypePredicate,
                                       TransferListener<? super DataSource> listener) {
         this(cache, cachePath, userAgent, contentTypePredicate, listener, DEFAULT_CONNECT_TIMEOUT_MILLIS,
                 DEFAULT_READ_TIMEOUT_MILLIS);
     }
 
-    public OptimalCacheHttpDataSource(boolean cache, String cachePath, String userAgent, Predicate<String> contentTypePredicate,
+    public HlsCacheableHttpDataSource(boolean cache, String cachePath, String userAgent, Predicate<String> contentTypePredicate,
                                       TransferListener<? super DataSource> listener, int connectTimeoutMillis,
                                       int readTimeoutMillis) {
         this(cache, cachePath, userAgent, contentTypePredicate, listener, connectTimeoutMillis, readTimeoutMillis, false,
                 null);
     }
 
-    public OptimalCacheHttpDataSource(boolean cache, String cachePath, String userAgent, Predicate<String> contentTypePredicate,
+    public HlsCacheableHttpDataSource(boolean cache, String cachePath, String userAgent, Predicate<String> contentTypePredicate,
                                       TransferListener<? super DataSource> listener, int connectTimeoutMillis,
                                       int readTimeoutMillis, boolean allowCrossProtocolRedirects,
                                       RequestProperties defaultRequestProperties) {
@@ -198,20 +198,25 @@ public class OptimalCacheHttpDataSource implements HttpDataSource {
         try {
             if (cache) {
                 InputStream stream = connection.getInputStream();
-                File seedingDir = new File(cachePath);
-                if (!seedingDir.exists() || seedingDir.isFile()) {
-                    seedingDir.mkdirs();
+                File cacheDir = new File(cachePath);
+                if (!cacheDir.exists() || cacheDir.isFile()) {
+                    cacheDir.mkdirs();
                 }
                 String url = dataSpec.uri.toString();
-                String name = url.substring(url.lastIndexOf("/"));
-                File file = new File(seedingDir, name);
-                FileOutputStream outputStream = new FileOutputStream(file);
-                byte[] bytes = new byte[1024 * 8];
-                int len;
-                while ((len = stream.read(bytes)) != -1) {
-                    outputStream.write(bytes, 0, len);
+                String tsName = url.substring(url.lastIndexOf("/"));
+                File tsFile = new File(cacheDir, tsName);
+                long length = tsFile.length();
+                if (length != connection.getContentLength()) {
+                    RandomAccessFile raf = new RandomAccessFile(tsFile, "rw");
+                    raf.seek(length);
+                    stream.skip(length);
+                    byte[] bytes = new byte[1024 * 8];
+                    int len;
+                    while ((len = stream.read(bytes)) != -1) {
+                        raf.write(bytes, 0, len);
+                    }
                 }
-                inputStream = new FileInputStream(file);
+                inputStream = new FileInputStream(tsFile);
             } else {
                 inputStream = connection.getInputStream();
             }

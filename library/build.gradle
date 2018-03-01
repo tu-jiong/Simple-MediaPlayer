@@ -24,6 +24,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.google.android.exoplayer:exoplayer-core:2.6.1'
-    compile 'com.google.android.exoplayer:exoplayer-hls:2.6.1'
+    compile 'com.google.android.exoplayer:exoplayer-core:2.7.0'
+    compile 'com.google.android.exoplayer:exoplayer-hls:2.7.0'
+    compile 'com.google.android.exoplayer:extension-rtmp:2.7.0'
 }

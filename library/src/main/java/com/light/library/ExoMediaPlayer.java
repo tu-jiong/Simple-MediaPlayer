@@ -22,6 +22,7 @@ import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.decoder.DecoderCounters;
+import com.google.android.exoplayer2.ext.rtmp.RtmpDataSourceFactory;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.TrackGroupArray;
@@ -69,7 +70,8 @@ class ExoMediaPlayer extends AbsMediaPlayer {
 
     private Player.EventListener mEventListener = new Player.EventListener() {
         @Override
-        public void onTimelineChanged(Timeline timeline, Object manifest) {
+        public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {
+
         }
 
         @Override
@@ -203,18 +205,6 @@ class ExoMediaPlayer extends AbsMediaPlayer {
             public void onVideoDisabled(DecoderCounters counters) {
             }
         });
-        //todo 以后加字幕
-//        mExoPlayer.addTextOutput(new TextRenderer.Output() {
-//            @Override
-//            public void onCues(List<Cue> list) {
-        //根据时间回调字幕
-//                if (ListUtils.isNotEmpty(list)) {
-//                    for (Cue cue : list) {
-//                        Ln.e("cue : " + cue.text + "  getCurrentPosition() = " + getCurrentPosition());
-//                    }
-//                }
-//            }
-//        });
     }
 
     @Override
@@ -275,22 +265,17 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     private MediaSource createMediaSource() {
         String appId = mConfig == null ? "MediaPlayer" : mConfig.getApplicationId();
         String userAgent = Util.getUserAgent(mContext, appId);
-        DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(mContext, userAgent);
         MediaSource mediaSource;
         if (isHls()) {
+            DataSource.Factory dataSourceFactory = new HlsCacheableDataSourceFactory(mContext, mConfig);
             mediaSource = new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(mUri));
+        } else if (isRtmp()) {
+            DataSource.Factory dataSourceFactory = new RtmpDataSourceFactory();
+            mediaSource = new ExtractorMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(mUri));
         } else {
+            DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(mContext, userAgent);
             mediaSource = new ExtractorMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(mUri));
         }
-        //todo 字幕 (测试支持srt vtt)
-//        Format subtitleFormat = Format.createTextSampleFormat(null, MimeTypes.APPLICATION_SUBRIP, C.SELECTION_FLAG_DEFAULT, "en");
-//        String zimuStr = mContext.getExternalFilesDir(null) + "/[zmk.tw]00800.Chs.R3.srt";
-//        File file = new File(zimuStr);
-//        if (file.exists()) {
-//            Ln.e("file.exists()");
-//            MediaSource subtitleSource = new SingleSampleMediaSource(Uri.parse(zimuStr), dataSourceFactory, subtitleFormat, C.TIME_UNSET);
-//            mediaSource = new MergingMediaSource(mediaSource, subtitleSource);
-//        }
         return mediaSource;
     }
 
@@ -461,6 +446,10 @@ class ExoMediaPlayer extends AbsMediaPlayer {
 
     private boolean isHls() {
         return mUri != null && (mUri.toLowerCase().endsWith(".m3u8") || mUri.toLowerCase().contains(".m3u8?key="));
+    }
+
+    private boolean isRtmp() {
+        return mUri != null && mUri.startsWith("rtmp://");
     }
 
     private boolean isHttpUrl(String str) {

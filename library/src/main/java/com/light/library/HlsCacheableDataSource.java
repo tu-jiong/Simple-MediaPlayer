@@ -22,7 +22,7 @@ import java.lang.reflect.InvocationTargetException;
  * Created by Tujiong on 2018/2/10.
  */
 
-public class OptimalCacheDataSource implements DataSource {
+public class HlsCacheableDataSource implements DataSource {
 
     private static final String TAG = "DefaultDataSource";
 
@@ -44,21 +44,21 @@ public class OptimalCacheDataSource implements DataSource {
 
     private DataSource dataSource;
 
-    public OptimalCacheDataSource(Context context, boolean cache, String cachePath, TransferListener<? super DataSource> listener,
+    public HlsCacheableDataSource(Context context, boolean cache, String cachePath, TransferListener<? super DataSource> listener,
                                   String userAgent, boolean allowCrossProtocolRedirects) {
         this(context, cache, cachePath, listener, userAgent, DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS,
                 DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS, allowCrossProtocolRedirects);
     }
 
-    public OptimalCacheDataSource(Context context, boolean cache, String cachePath, TransferListener<? super DataSource> listener,
+    public HlsCacheableDataSource(Context context, boolean cache, String cachePath, TransferListener<? super DataSource> listener,
                                   String userAgent, int connectTimeoutMillis, int readTimeoutMillis,
                                   boolean allowCrossProtocolRedirects) {
         this(context, listener,
-                new OptimalCacheHttpDataSource(cache, cachePath, userAgent, null, listener, connectTimeoutMillis,
+                new HlsCacheableHttpDataSource(cache, cachePath, userAgent, null, listener, connectTimeoutMillis,
                         readTimeoutMillis, allowCrossProtocolRedirects, null));
     }
 
-    public OptimalCacheDataSource(Context context, TransferListener<? super DataSource> listener,
+    public HlsCacheableDataSource(Context context, TransferListener<? super DataSource> listener,
                                   DataSource baseDataSource) {
         this.context = context.getApplicationContext();
         this.listener = listener;

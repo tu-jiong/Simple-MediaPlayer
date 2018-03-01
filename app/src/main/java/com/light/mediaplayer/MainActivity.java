@@ -1,8 +1,12 @@
 package com.light.mediaplayer;
 
+import android.app.Activity;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import android.os.Environment;
+import android.util.Log;
 import android.view.SurfaceView;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.light.library.Config;
@@ -10,16 +14,23 @@ import com.light.library.ErrorReporter;
 import com.light.library.IMediaPlayer;
 import com.light.library.Media;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
+    //    private String url = "rtmp://live.hkstv.hk.lxdns.com/live/hks";
+    private String url = "http://source.highso.com.cn/1705/JBGYTCLI/JBGYTCLI_phone/JBGYTCLI_phone.m3u8";
     private SurfaceView mSurfaceView;
+    private SeekBar mSeekBar;
+    private TextView mTextView;
     private IMediaPlayer mMediaPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mSurfaceView = findViewById(R.id.surface_view);
+        mSurfaceView = (SurfaceView) findViewById(R.id.surface_view);
+        mSeekBar = (SeekBar) findViewById(R.id.seek_bar);
+        mTextView = (TextView) findViewById(R.id.text_view);
+        mTextView.setText(url);
         mMediaPlayer = IMediaPlayer.Factory.createMediaPlayer(this);
         mMediaPlayer.setSurface(mSurfaceView);
         Config config = new Config();
@@ -28,10 +39,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void report(String uri, ExoPlaybackException error) {
                 //Do something
+                Log.e("tujiong", error.toString());
             }
         });
-//        config.setCache(true);
-//        config.setCachePath("your path");
+        config.setCache(true);
+        config.setCachePath(Environment.getExternalStorageDirectory().getAbsolutePath() + "/m3u8-cache");
         mMediaPlayer.setConfig(config);
         mMediaPlayer.setMediaEventListener(new IMediaPlayer.MediaEventListener() {
             @Override
@@ -66,7 +78,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPositionChanged(int position, int buffered, int duration) {
-
+                mSeekBar.setProgress(position);
+                mSeekBar.setMax(duration);
             }
 
             @Override
@@ -74,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-        mMediaPlayer.setMedia(new Media("your url"));
+        mMediaPlayer.setMedia(new Media(url));
     }
 
     @Override
