@@ -74,7 +74,6 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     private Player.EventListener mEventListener = new Player.EventListener() {
         @Override
         public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {
-
         }
 
         @Override
@@ -115,6 +114,7 @@ class ExoMediaPlayer extends AbsMediaPlayer {
                         mResumePos = 0;
                         changeAudioFocus(false);
                         drawSurface();
+                        worseCount = 0;
                         mMediaEventListener.onComplete();
                         break;
                     case Player.STATE_IDLE:
@@ -146,6 +146,7 @@ class ExoMediaPlayer extends AbsMediaPlayer {
         @Override
         public void onPlayerError(ExoPlaybackException error) {
             mPlayerState = IMediaPlayer.STATE_ERROR;
+            worseCount = 0;
             drawSurface();
             if (error == null)
                 return;
@@ -245,6 +246,7 @@ class ExoMediaPlayer extends AbsMediaPlayer {
             mPosition = position;
             mResumePos = position;
             mDuration = 0;
+            worseCount = 0;
             openMediaSource();
         }
     }
@@ -274,7 +276,7 @@ class ExoMediaPlayer extends AbsMediaPlayer {
                 mExoPlayer.seekTo(mPosition);
             setSpeed(mSpeed);
             mExoPlayer.setPlayWhenReady(true);
-            updateProgress(true);
+            updateProgress();
         }
     }
 
@@ -482,27 +484,23 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     }
 
     private void updateProgress() {
-        updateProgress(false);
-    }
-
-    private void updateProgress(boolean justOpen) {
         if (mExoPlayer != null) {
             int state = mExoPlayer.getPlaybackState();
             if (state != Player.STATE_IDLE) {
+                if (state == Player.STATE_READY)
+                    worseCount = 0;
                 mPosition = mExoPlayer.getCurrentPosition();
                 mResumePos = mPosition;
                 long buffered = mExoPlayer.getBufferedPosition();
                 if (mMediaEventListener != null && state == Player.STATE_READY && mExoPlayer.getPlayWhenReady())
                     mMediaEventListener.onPositionChanged((int) mPosition, (int) buffered, (int) getDuration());
                 int buffer = Math.min(DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS, DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS);
-                if (!justOpen && buffered - mPosition < buffer && state == Player.STATE_BUFFERING && mExoPlayer.getPlayWhenReady()) {
-                    if (worseCount > 3) {
+                if (buffered - mPosition < buffer && state == Player.STATE_BUFFERING && mExoPlayer.getPlayWhenReady()) {
+                    if (worseCount > 15) {
                         if (mMediaEventListener != null)
                             mMediaEventListener.onNetWorse();
                     }
                     worseCount++;
-                } else {
-                    worseCount = 0;
                 }
             }
         }
