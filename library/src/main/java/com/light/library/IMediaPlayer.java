@@ -28,7 +28,12 @@ public interface IMediaPlayer {
     int STATE_ERROR = 6;
     int STATE_IDLE = 7;
 
+    int MODE_SCALE = 0;
+    int MODE_CROP = 1;
+
     void setConfig(Config config);
+
+    void setVideoScaleMode(int mode);
 
     void setMedia(Media media);
 

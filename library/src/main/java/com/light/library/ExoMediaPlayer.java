@@ -15,6 +15,7 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayerFactory;
@@ -213,6 +214,17 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     @Override
     public void setConfig(Config config) {
         mConfig = config;
+    }
+
+    @Override
+    public void setVideoScaleMode(int mode) {
+        if (mExoPlayer != null) {
+            if (mode == MODE_SCALE) {
+                mExoPlayer.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT);
+            } else if (mode == MODE_CROP) {
+                mExoPlayer.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING);
+            }
+        }
     }
 
     @Override
