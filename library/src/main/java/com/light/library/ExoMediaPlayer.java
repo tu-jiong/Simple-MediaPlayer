@@ -179,6 +179,7 @@ class ExoMediaPlayer extends AbsMediaPlayer {
         TrackSelection.Factory videoTrackSelectionFactory = new AdaptiveTrackSelection.Factory(bandwidthMeter);
         TrackSelector trackSelector = new DefaultTrackSelector(videoTrackSelectionFactory);
         mExoPlayer = ExoPlayerFactory.newSimpleInstance(mContext, trackSelector);
+        mExoPlayer.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING);
         mExoPlayer.addListener(mEventListener);
         mExoPlayer.addVideoDebugListener(new VideoRendererEventListener() {
             @Override
