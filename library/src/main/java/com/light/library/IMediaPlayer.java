@@ -57,9 +57,6 @@ public interface IMediaPlayer {
 
     void setMute(boolean mute);
 
-    @Deprecated
-    boolean isPlayerRunning();
-
     void setSurface(SurfaceView surfaceView);
 
     void clearSurface();

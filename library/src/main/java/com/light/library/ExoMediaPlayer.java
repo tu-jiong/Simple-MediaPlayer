@@ -247,18 +247,18 @@ class ExoMediaPlayer extends AbsMediaPlayer {
             mResumePos = position;
             mDuration = 0;
             worseCount = 0;
-            openMediaSource();
+            openInternal();
         }
     }
 
     private void retry() {
         if (!TextUtils.isEmpty(mUri)) {
-            openMediaSource();
+            openInternal();
             mRetry++;
         }
     }
 
-    private void openMediaSource() {
+    private void openInternal() {
         if (!isHttpUrl(mUri)) {
             try {
                 MediaMetadataRetriever mmr = new MediaMetadataRetriever();
@@ -407,11 +407,6 @@ class ExoMediaPlayer extends AbsMediaPlayer {
         } catch (Exception e) {
             //Do nothing
         }
-    }
-
-    @Override
-    public boolean isPlayerRunning() {
-        return mExoPlayer != null && mPlayerState != IMediaPlayer.STATE_IDLE;
     }
 
     @Override
