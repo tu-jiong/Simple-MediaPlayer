@@ -297,7 +297,7 @@ class ExoMediaPlayer extends AbsMediaPlayer {
 
     private void drawSurface() {
         if (mSurfaceHolder != null)
-            mSurfaceHolder.setFormat(PixelFormat.TRANSPARENT);
+            mSurfaceHolder.setFormat(PixelFormat.OPAQUE);
     }
 
     @Override
