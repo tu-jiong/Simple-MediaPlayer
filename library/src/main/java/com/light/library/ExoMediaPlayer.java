@@ -1,8 +1,6 @@
 package com.light.library;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.media.MediaMetadataRetriever;
 import android.net.ConnectivityManager;
@@ -298,14 +296,8 @@ class ExoMediaPlayer extends AbsMediaPlayer {
     }
 
     private void drawSurface() {
-        if (mSurfaceHolder != null) {
+        if (mSurfaceHolder != null)
             mSurfaceHolder.setFormat(PixelFormat.TRANSPARENT);
-            Canvas canvas = mSurfaceHolder.lockCanvas();
-            if (canvas != null) {
-                canvas.drawColor(Color.BLACK);
-                mSurfaceHolder.unlockCanvasAndPost(canvas);
-            }
-        }
     }
 
     @Override
